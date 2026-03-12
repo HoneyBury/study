@@ -1,0 +1,118 @@
+﻿cmake_minimum_required(VERSION 3.23)
+project(CppSharp VERSION 5.0.0
+        DESCRIPTION "A modern C++ project template using Conan and CMake"
+        LANGUAGES CXX)
+
+include(GNUInstallDirs)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+if(CMAKE_CONFIGURATION_TYPES)
+    foreach(config ${CMAKE_CONFIGURATION_TYPES})
+        string(TOUPPER ${config} config_upper)
+        set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${config_upper} ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+        set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${config_upper} ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+        set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${config_upper} ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+    endforeach()
+endif()
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(utils)
+option(BUILD_TESTING "Build the tests" ON) 
+option(CPACK_CREATE_DESKTOP_SHORTCUT "Offer to create a desktop shortcut during installation" ON)
+
+add_subdirectory(src)
+if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+include(CMakePackageConfigHelpers)
+
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
+set(CPACK_PACKAGE_VENDOR "MyProject Inc.")
+set(PROJECT_AUTHOR "HoneyBury zoujiahe389@gmail.com")
+set(CPACK_PACKAGE_CONTACT "${PROJECT_AUTHOR}")
+set(PROJECT_URL "https://github.com/HoneyBury/CppSharp.git")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(OS_IDENTIFIER "macos")
+else()
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" OS_IDENTIFIER)
+endif()
+
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" ARCH_IDENTIFIER)
+
+if(ARCH_IDENTIFIER STREQUAL "amd64" OR ARCH_IDENTIFIER STREQUAL "x86_64")
+    set(ARCH_IDENTIFIER "x64")
+endif()
+
+set(CPACK_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}-${OS_IDENTIFIER}-${ARCH_IDENTIFIER}")
+
+if(WIN32)
+    set(CPACK_GENERATOR "NSIS")
+elseif(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "DEB")
+elseif(APPLE)
+    set(CPACK_GENERATOR "DragNDrop")
+endif()
+
+if(CPACK_GENERATOR STREQUAL "NSIS")
+    set(CPACK_NSIS_DISPLAY_NAME "${CPACK_PACKAGE_NAME} ${CPACK_PACKAGE_VERSION}")
+    set(CPACK_NSIS_PUBLISHER "${CPACK_PACKAGE_VENDOR}")
+    set(CPACK_NSIS_URL_INFO_ABOUT "${PROJECT_URL}")
+    set(CPACK_NSIS_HELP_LINK "${PROJECT_URL}/issues")
+    set(CPACK_NSIS_CONTACT "${CPACK_PACKAGE_CONTACT}")
+
+    set(CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/install_icon.ico")
+    set(CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}/assets/uninstall_icon.ico")
+
+    set(CPACK_NSIS_PACKAGE_NAME "${CPACK_PACKAGE_NAME}")
+    set(CPACK_NSIS_CREATE_ICONS_EXTRA "")
+    list(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$SMPROGRAMS\\\\${CPACK_NSIS_PACKAGE_NAME}\\\\${PROJECT_NAME}.lnk' '$INSTDIR\\\\bin\\\\${PROJECT_NAME}.exe'")
+    list(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$SMPROGRAMS\\\\${CPACK_NSIS_PACKAGE_NAME}\\\\Uninstall.lnk' '$INSTDIR\\\\Uninstall.exe'")
+
+    if(CPACK_CREATE_DESKTOP_SHORTCUT)
+        list(APPEND CPACK_NSIS_CREATE_ICONS_EXTRA "CreateShortCut '$DESKTOP\\\\${PROJECT_NAME}.lnk' '$INSTDIR\\\\bin\\\\${PROJECT_NAME}.exe'")
+    endif()
+
+    set(CPACK_NSIS_MENU_LINKS "${PROJECT_URL}" "Project Website")
+
+    set(CPACK_NSIS_MODIFY_PATH ON)
+endif()
+
+if(CPACK_GENERATOR STREQUAL "DEB")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${PROJECT_AUTHOR}")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+endif()
+
+set(CPACK_SOURCE_IGNORE_FILES "/.git/" "/build/" "/.vscode/" "/.idea/" ".DS_Store" "*.swp" "*.bak" "/.venv/")
+
+write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion
+)
+configure_package_config_file(
+        "${CMAKE_SOURCE_DIR}/cmake/config.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+install(EXPORT ${PROJECT_NAME}Targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
+)
+
+include(CPack)

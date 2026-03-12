@@ -1,0 +1,27 @@
+BasedOnStyle: Google
+Language: Cpp
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 120
+
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+
+PointerAlignment: Left
+SpacesInParentheses: false
+SpacesInCStyleCastParentheses: false
+
+SortIncludes: true
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<.*\\.h>'
+    Priority: 1
+  - Regex: '^<.*>'
+    Priority: 2
+  - Regex: '.*'
+    Priority: 3
+
+FixNamespaceComments: true
